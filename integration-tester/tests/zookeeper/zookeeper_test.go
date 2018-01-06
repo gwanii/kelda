@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/kelda/kelda/api/client"
 	"github.com/kelda/kelda/db"
 	"github.com/kelda/kelda/integration-tester/util"
 
@@ -13,7 +14,7 @@ import (
 )
 
 func TestZookeeper(t *testing.T) {
-	clnt, err := util.GetDefaultDaemonClient()
+	clnt, creds, err := util.GetDefaultDaemonClient()
 	if err != nil {
 		t.Fatalf("couldn't get api client: %s", err)
 	}
@@ -36,7 +37,13 @@ func TestZookeeper(t *testing.T) {
 		}
 	}
 
-	test(t, util.NewSSHUtil(machines), zkContainers)
+	leaderIP, err := client.GetLeaderIP(machines, creds)
+	if err != nil {
+		t.Fatalf("failed to get leader IP: %s", err)
+	}
+
+	sshUtil := util.NewSSHUtil(leaderIP)
+	test(t, sshUtil, zkContainers)
 }
 
 // Write a random key value pair to each zookeeper node, and then ensure that

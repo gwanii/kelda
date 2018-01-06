@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/kelda/kelda/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // A Blueprint is an abstract representation of the policy language.
@@ -201,6 +203,27 @@ func NewRuntimeValue(key string) ContainerValue {
 // NewString returns a ContainerValue representing a string.
 func NewString(str string) ContainerValue {
 	return ContainerValue{str}
+}
+
+// SortContainerValues divides a map of ContainerValues to two maps -- one of
+// just string values, and one of secrets.
+func SortContainerValues(vals map[string]ContainerValue) (rawStrings, secrets map[string]string) {
+	rawStrings = map[string]string{}
+	secrets = map[string]string{}
+	for name, valIntf := range vals {
+		switch val := valIntf.Value.(type) {
+		case string:
+			rawStrings[name] = val
+		case Secret:
+			secrets[name] = val.NameOfSecret
+		case RuntimeValue:
+			log.WithField("val", valIntf).Error(
+				"RuntimeValue is no longer supported. Ignoring.")
+		default:
+			panic("unreached")
+		}
+	}
+	return
 }
 
 // String returns a human-readable representation of the ContainerValue. This

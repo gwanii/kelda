@@ -15,9 +15,9 @@ import (
 	"github.com/kelda/kelda/db"
 )
 
-// Test the success path when generating and installing credentials on a new
-// machine.
-func TestSyncCredentials(t *testing.T) {
+// Test the success path when generating and installing TLS credentials on a
+// new machine.
+func TestSyncCredentialsTLS(t *testing.T) {
 	key, err := goRSA.GenerateKey(rand.Reader, 2048)
 	assert.NoError(t, err)
 
@@ -44,7 +44,7 @@ func TestSyncCredentials(t *testing.T) {
 		view.Commit(dbm)
 		return nil
 	})
-	syncCredentialsOnce(conn, expSigner, ca)
+	syncCredentialsOnce(conn, expSigner, ca, "")
 
 	aferoFs := afero.Afero{Fs: mockFs}
 	certBytes, err := aferoFs.ReadFile(tlsIO.SignedCertPath(cliPath.MinionTLSDir))
@@ -58,13 +58,9 @@ func TestSyncCredentials(t *testing.T) {
 	caBytes, err := aferoFs.ReadFile(tlsIO.CACertPath(cliPath.MinionTLSDir))
 	assert.NoError(t, err)
 	assert.NotEmpty(t, caBytes)
-
-	// Ensure that the machine's public key got written to the database.
-	dbm := conn.SelectFromMachine(nil)[0]
-	assert.Equal(t, string(certBytes), dbm.PublicKey)
 }
 
-func TestExistingCredentialsDontGetOverwritten(t *testing.T) {
+func TestExistingTLSCredentialsDontGetOverwritten(t *testing.T) {
 	conn := db.New()
 	mockFs := afero.NewMemMapFs()
 	aferoFs := afero.Afero{Fs: mockFs}
@@ -89,11 +85,7 @@ func TestExistingCredentialsDontGetOverwritten(t *testing.T) {
 		view.Commit(dbm)
 		return nil
 	})
-	syncCredentialsOnce(conn, nil, ca)
-
-	// Ensure that the existing public key got saved to the database.
-	dbm := conn.SelectFromMachine(nil)[0]
-	assert.Equal(t, existingCert, dbm.PublicKey)
+	syncCredentialsOnce(conn, nil, ca, "")
 
 	// Ensure that the existing public key was not overwritten.
 	certOnMachine, err := aferoFs.ReadFile(
@@ -102,15 +94,21 @@ func TestExistingCredentialsDontGetOverwritten(t *testing.T) {
 	assert.Equal(t, existingCert, string(certOnMachine))
 }
 
+func TestSyncKubeSecret(t *testing.T) {
+	// TODO
+}
+
 func TestFailedToSSH(t *testing.T) {
 	ca, err := rsa.NewCertificateAuthority()
 	assert.NoError(t, err)
 
 	conn := db.New()
+	cloudID := "cloudID"
 	conn.Txn(db.MachineTable).Run(func(view db.Database) error {
 		dbm := view.InsertMachine()
 		dbm.PublicIP = "8.8.8.8"
 		dbm.PrivateIP = "9.9.9.9"
+		dbm.CloudID = cloudID
 		view.Commit(dbm)
 		return nil
 	})
@@ -119,10 +117,8 @@ func TestFailedToSSH(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	syncCredentialsOnce(conn, nil, ca)
-	// The machine's PublicKey should not be set, because Kelda should have
-	// given up and not set the public key when getting an SFTP client failed.
-	assert.Empty(t, conn.SelectFromMachine(nil)[0].PublicKey)
+	syncCredentialsOnce(conn, nil, ca, "")
+	assert.NotContains(t, cloudID, machinesWithTLS)
 }
 
 type mockSFTPFs struct {

@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/kelda/kelda/api/client"
 	"github.com/kelda/kelda/db"
 	"github.com/kelda/kelda/integration-tester/util"
 )
@@ -17,7 +18,7 @@ const (
 )
 
 func TestLoadBalancer(t *testing.T) {
-	c, err := util.GetDefaultDaemonClient()
+	c, creds, err := util.GetDefaultDaemonClient()
 	if err != nil {
 		t.Fatalf("couldn't get local client: %s", err)
 	}
@@ -61,7 +62,12 @@ func TestLoadBalancer(t *testing.T) {
 	log.WithField("expected unique responses", len(loadBalancedContainers)).
 		Info("Starting fetching..")
 
-	sshUtil := util.NewSSHUtil(machines)
+	leaderIP, err := client.GetLeaderIP(machines, creds)
+	if err != nil {
+		t.Fatalf("failed to get leader IP: %s", err)
+	}
+
+	sshUtil := util.NewSSHUtil(leaderIP)
 	loadBalancedCounts := map[string]int{}
 	var loadBalancedCountsLock sync.Mutex
 	var wg sync.WaitGroup

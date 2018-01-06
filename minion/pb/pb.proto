@@ -23,7 +23,6 @@ message MinionConfig {
     string FloatingIP = 9;
     repeated string EtcdMembers = 10;
     repeated string AuthorizedKeys = 11;
-    map<string, string> MinionIPToPublicKey = 12;
 }
 
 message Reply {

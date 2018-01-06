@@ -11,6 +11,7 @@ import (
 	"github.com/kelda/kelda/join"
 	"github.com/kelda/kelda/minion/docker"
 	"github.com/kelda/kelda/util/str"
+	"github.com/kelda/kelda/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -35,6 +36,18 @@ const (
 
 	// RegistryName is the name of the registry container.
 	RegistryName = "registry"
+
+	// KubeAPIServerName is the name of the Kubernetes API server container.
+	KubeAPIServerName = "kube-apiserver"
+
+	// KubeletName is the name of the Kubernetes kubelet container.
+	KubeletName = "kubelet"
+
+	// KubeControllerManagerName is the name of the Kubernetes controller manager container.
+	KubeControllerManagerName = "kube-controller-manager"
+
+	// KubeSchedulerName is the name of the Kubernetes scheduler container.
+	KubeSchedulerName = "kube-scheduler"
 )
 
 // The names of the images to be run. These are identifier that could be used
@@ -43,6 +56,7 @@ const (
 	ovsImage      = "keldaio/ovs"
 	etcdImage     = "quay.io/coreos/etcd:v3.3"
 	registryImage = "registry:2.6.2"
+	kubeImage     = version.Image
 )
 
 const (
@@ -65,7 +79,7 @@ func Run(_conn db.Conn, _dk docker.Client, role db.Role) {
 	conn = _conn
 	dk = _dk
 
-	images := []string{ovsImage, etcdImage}
+	images := []string{ovsImage, etcdImage, kubeImage}
 	if role == db.Master {
 		images = append(images, registryImage)
 	}
@@ -139,6 +153,7 @@ func syncContainersScore(left, right interface{}) int {
 		return -1
 	}
 
+	// TODO: Consider FilepathToContent
 	for key, value := range ro.Env {
 		if dkc.Env[key] != value {
 			return -1

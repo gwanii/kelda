@@ -51,12 +51,16 @@ initialize_docker() {
 }
 
 initialize_minion() {
-	# Create the TLS directory now so that it will exist when the minion starts,
+	# Create the Kelda directory now so that it will exist when the minion starts,
 	# and attempts to mount it as a volume. If the directory didn't exist, then
 	# Docker would automatically create it, resulting in it being owned by root.
 	# The TLS credential installation code running on the daemon would then be
 	# unable to write to the directory.
-	install -d -o kelda -m 755 {{.TLSDir}}
+	install -d -o kelda -m 755 {{.KeldaHome}}
+
+	mkdir -p /var/lib/kubelet
+	mount -o bind /var/lib/kubelet /var/lib/kubelet/
+	mount --make-shared /var/lib/kubelet/
 
 	# Create the etcd data directory.
 	mkdir -p /var/lib/etcd
@@ -76,7 +80,7 @@ initialize_minion() {
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	-v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt \
 	-v /home/kelda/.ssh:/home/kelda/.ssh:rw \
-	-v {{.TLSDir}}:{{.TLSDir}}:ro \
+	-v {{.KeldaHome}}:{{.KeldaHome}}:ro \
 	-v /run/docker:/run/docker:rw {{.KeldaImage}} \
 	kelda -l {{.LogLevel}} minion {{.MinionOpts}}
 	Restart=on-failure

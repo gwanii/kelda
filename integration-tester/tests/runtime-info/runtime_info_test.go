@@ -16,7 +16,7 @@ import (
 const nginxIndexPath = "/usr/share/nginx/html/index.html"
 
 func TestPublicIPEnv(t *testing.T) {
-	clnt, err := util.GetDefaultDaemonClient()
+	clnt, _, err := util.GetDefaultDaemonClient()
 	assert.NoError(t, err)
 	defer clnt.Close()
 

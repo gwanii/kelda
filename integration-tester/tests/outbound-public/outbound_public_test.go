@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/kelda/kelda/api/client"
 	"github.com/kelda/kelda/blueprint"
 	"github.com/kelda/kelda/db"
 	"github.com/kelda/kelda/integration-tester/util"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestOutboundPublic(t *testing.T) {
-	clnt, err := util.GetDefaultDaemonClient()
+	clnt, creds, err := util.GetDefaultDaemonClient()
 	if err != nil {
 		t.Fatalf("couldn't get api client: %s", err)
 	}
@@ -33,7 +34,13 @@ func TestOutboundPublic(t *testing.T) {
 		t.Fatalf("couldn't query machines: %s", err)
 	}
 
-	test(t, util.NewSSHUtil(machines), containers, connections)
+	leaderIP, err := client.GetLeaderIP(machines, creds)
+	if err != nil {
+		t.Fatalf("failed to get leader IP: %s", err)
+	}
+
+	sshUtil := util.NewSSHUtil(leaderIP)
+	test(t, sshUtil, containers, connections)
 }
 
 var testPort = 80

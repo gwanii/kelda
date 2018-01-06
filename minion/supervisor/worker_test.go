@@ -61,6 +61,7 @@ func TestWorker(t *testing.T) {
 		OvsdbName:         {"ovsdb-server"},
 		OvncontrollerName: {"ovn-controller"},
 		OvsvswitchdName:   {"ovs-vswitchd"},
+		KubeletName:       kubeletArgs(ip),
 	}
 	assert.Equal(t, exp, ctx.fd.running())
 
@@ -148,8 +149,7 @@ func TestCfgOVN(t *testing.T) {
 				result.args = args
 				return []byte("ignored"), nil
 			default:
-				t.Errorf("Unexpected exec call: %v",
-					append([]string{name}, args...))
+				t.Errorf("Unexpected exec call: %v", append([]string{name}, args...))
 				return nil, errors.New("unreached")
 			}
 		}
@@ -187,18 +187,21 @@ stt
 func TestCfgOVNErrors(t *testing.T) {
 	setupExec := func(getShouldError, setShouldError bool) {
 		execRun = func(name string, args ...string) ([]byte, error) {
-			if !str.SliceContains(args, "get") &&
-				!str.SliceContains(args, "set") {
-				t.Errorf("Unexpected exec call: %v",
-					append([]string{name}, args...))
+			switch {
+			case str.SliceContains(args, "get"):
+				if getShouldError {
+					return nil, assert.AnError
+				}
+				return nil, nil
+			case str.SliceContains(args, "set"):
+				if setShouldError {
+					return nil, assert.AnError
+				}
+				return nil, nil
+			default:
+				t.Errorf("Unexpected exec call: %v", append([]string{name}, args...))
 				return nil, errors.New("unreached")
 			}
-
-			if (str.SliceContains(args, "get") && getShouldError) ||
-				(str.SliceContains(args, "set") && setShouldError) {
-				return nil, assert.AnError
-			}
-			return nil, nil
 		}
 	}
 

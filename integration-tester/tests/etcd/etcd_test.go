@@ -5,12 +5,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/kelda/kelda/api/client"
 	"github.com/kelda/kelda/db"
 	"github.com/kelda/kelda/integration-tester/util"
 )
 
 func TestEtcd(t *testing.T) {
-	clnt, err := util.GetDefaultDaemonClient()
+	clnt, creds, err := util.GetDefaultDaemonClient()
 	if err != nil {
 		t.Fatalf("couldn't get api client: %s", err)
 	}
@@ -26,7 +27,12 @@ func TestEtcd(t *testing.T) {
 		t.Fatalf("couldn't query machines: %s", err)
 	}
 
-	test(t, util.NewSSHUtil(machines), containers)
+	leaderIP, err := client.GetLeaderIP(machines, creds)
+	if err != nil {
+		t.Fatalf("couldn't get leader IP: %s", err)
+	}
+
+	test(t, util.NewSSHUtil(leaderIP), containers)
 }
 
 func test(t *testing.T, sshUtil util.SSHUtil, containers []db.Container) {

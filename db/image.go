@@ -11,8 +11,11 @@ type Image struct {
 	// The Dockerfile with which to build the image.
 	Dockerfile string
 
-	// The ID of the built image.
-	DockerID string
+	// The repo digest of the built image. This is the URL from which the image
+	// can be pulled by other nodes in the cluster.
+	// TODO: Document that if the leader changes, all custom built images will be
+	// restarted.
+	RepoDigest string
 
 	// The build status of the image.
 	Status string
