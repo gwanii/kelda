@@ -187,25 +187,30 @@ func PrintUsageString(commands string, explanation string, flags *flag.FlagSet) 
 	}
 }
 
-// JoinNotifiers merges two notifications channels, `a` and `b`.  The returned channel
-// will notify if one or more notifications have occurred on `a` or `b` since the last
-// time it was checked.
-func JoinNotifiers(a, b chan struct{}) chan struct{} {
+// JoinNotifiers merges a list of notifications channels. The returned channel
+// will notify if one or more notifications have occurred on any of the
+// channels since the last time it was checked.
+func JoinNotifiers(notifiers ...chan struct{}) chan struct{} {
 	c := make(chan struct{}, 1)
-	go func() {
-		c <- struct{}{}
-		for {
-			select {
-			case <-a:
-			case <-b:
-			}
+	c <- struct{}{}
 
-			select {
-			case c <- struct{}{}:
-			default: // There's a notification in queue, no need for another.
+	for _, notifier := range notifiers {
+		go func(notifier chan struct{}) {
+			for {
+				select {
+				case <-notifier:
+				}
+
+				select {
+				case c <- struct{}{}:
+				default:
+					// There's a notification in queue, no need for
+					// another.
+				}
 			}
-		}
-	}()
+		}(notifier)
+	}
+
 	return c
 }
 

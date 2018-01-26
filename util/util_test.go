@@ -68,7 +68,7 @@ func TestWaitFor(t *testing.T) {
 	assert.EqualError(t, err, "timed out")
 }
 
-func TestJoinNotifiers(t *testing.T) {
+func TestJoinTwoNotifiers(t *testing.T) {
 	t.Parallel()
 
 	a := make(chan struct{})
@@ -102,6 +102,53 @@ func TestJoinNotifiers(t *testing.T) {
 	b <- struct{}{}
 	select {
 	case <-c:
+	case <-timeout:
+		t.FailNow()
+	}
+}
+
+func TestJoinThreeNotifiers(t *testing.T) {
+	t.Parallel()
+
+	a := make(chan struct{})
+	b := make(chan struct{})
+	c := make(chan struct{})
+	joined := JoinNotifiers(a, b, c)
+
+	timeout := time.Tick(30 * time.Second)
+
+	select {
+	case <-joined:
+	case <-timeout:
+		t.FailNow()
+	}
+
+	a <- struct{}{}
+	select {
+	case <-joined:
+	case <-timeout:
+		t.FailNow()
+	}
+
+	b <- struct{}{}
+	select {
+	case <-joined:
+	case <-timeout:
+		t.FailNow()
+	}
+
+	c <- struct{}{}
+	select {
+	case <-joined:
+	case <-timeout:
+		t.FailNow()
+	}
+
+	a <- struct{}{}
+	b <- struct{}{}
+	c <- struct{}{}
+	select {
+	case <-joined:
 	case <-timeout:
 		t.FailNow()
 	}
